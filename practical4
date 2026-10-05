@@ -1,0 +1,113 @@
+import numpy as np
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input, LSTM, Dense
+
+#define parameters for our dataset
+num_samples = 1000 #number of training exampls
+input_seq_len = 10 #length of input seq
+target_seq_len = 10 #length of target sequence
+num_features = 5 #number of unique word or tokes in vocab
+
+#generate random input sequence (one-hot encoded for simplicity)
+#Each input sequence will be a series of integer indices
+encoder_input_data = np.random.randint(0, num_features, size=(num_samples, input_seq_len))
+
+
+#Generate target sequence
+
+decoder_target_data = np.zeros((num_samples, target_seq_len, num_features), dtype='float32')
+decoder_input_data = np.zeros((num_samples, target_seq_len, num_features), dtype='float32')
+
+#create one hot encoded version for both input and target for keras
+encoder_input_one_hot = np.zeros(
+    (num_samples, input_seq_len, num_features), dtype='float32'
+)
+for i, sequence in enumerate(encoder_input_data):
+  for t, feature in enumerate(sequence):
+    encoder_input_one_hot[i, t, feature] = 1.0
+
+
+#generate target sequence which are reverssed input
+#decoder target will be the reversed sequence
+for i in range(num_samples):
+  reversed_sequence = encoder_input_data[i][::-1]
+  decoder_input_data[i, 0, 0] = 1.0 #token start
+  for t, feature in enumerate(reversed_sequence[:-1]):
+    decoder_input_data[i, t+1, feature] = 1.0
+
+#decoder target
+for t,  feature in enumerate(reversed_sequence):
+  decoder_target_data[i, t, feature] = 1.0
+
+print("Encoder input shape:", encoder_input_one_hot.shape)
+print("Decoder input shape:", decoder_input_data.shape)
+print("Decoder target shape:", decoder_target_data.shape)
+
+print("\nSample encoder input(induces):")
+print(encoder_input_one_hot[0])
+
+print("\nSample decoder target(one-hot, indicating indices):")
+print(np.argmax(decoder_target_data[0], axis=-1))
+
+#encoder setup
+latent_dim = 256
+
+encoder_inputs = Input(shape=(None, num_features))
+encoder_lstm = LSTM(latent_dim, return_state=True)
+encoder_outputs, state_h, state_c = encoder_lstm(encoder_inputs)
+encoder_states = [state_h, state_c]
+
+#decoder
+decoder_inputs = Input(shape=(None, num_features))
+decoder_lstm = LSTM(latent_dim, return_sequences=True, return_state=True)
+decoder_outputs, _, _ = decoder_lstm(decoder_inputs, initial_state=encoder_states)
+decoder_dense = Dense(num_features, activation='softmax')
+decoder_outputs = decoder_dense(decoder_outputs)
+
+#define the model
+model = Model([encoder_inputs, decoder_inputs], decoder_outputs)
+
+model.summary()
+     
+Encoder input shape: (1000, 10, 5)
+Decoder input shape: (1000, 10, 5)
+Decoder target shape: (1000, 10, 5)
+
+Sample encoder input(induces):
+[[0. 0. 0. 1. 0.]
+ [0. 0. 0. 0. 1.]
+ [1. 0. 0. 0. 0.]
+ [0. 0. 1. 0. 0.]
+ [1. 0. 0. 0. 0.]
+ [0. 1. 0. 0. 0.]
+ [0. 0. 0. 0. 1.]
+ [0. 0. 1. 0. 0.]
+ [0. 0. 0. 1. 0.]
+ [0. 0. 1. 0. 0.]]
+
+Sample decoder target(one-hot, indicating indices):
+[0 0 0 0 0 0 0 0 0 0]
+Model: "functional"
+┏━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━┓
+┃ Layer (type)        ┃ Output Shape      ┃    Param # ┃ Connected to      ┃
+┡━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━┩
+│ input_layer_2       │ (None, None, 5)   │          0 │ -                 │
+│ (InputLayer)        │                   │            │                   │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ input_layer_3       │ (None, None, 5)   │          0 │ -                 │
+│ (InputLayer)        │                   │            │                   │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ lstm_2 (LSTM)       │ [(None, 256),     │    268,288 │ input_layer_2[0]… │
+│                     │ (None, 256),      │            │                   │
+│                     │ (None, 256)]      │            │                   │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ lstm_3 (LSTM)       │ [(None, None,     │    268,288 │ input_layer_3[0]… │
+│                     │ 256), (None,      │            │ lstm_2[0][1],     │
+│                     │ 256), (None,      │            │ lstm_2[0][2]      │
+│                     │ 256)]             │            │                   │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ dense_1 (Dense)     │ (None, None, 5)   │      1,285 │ lstm_3[0][0]      │
+└─────────────────────┴───────────────────┴────────────┴───────────────────┘
+ Total params: 537,861 (2.05 MB)
+ Trainable params: 537,861 (2.05 MB)
+ Non-trainable params: 0 (0.00 B)
