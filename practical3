@@ -1,0 +1,197 @@
+
+
+import numpy as np
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import SimpleRNN, Dense, Embedding
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+
+# 1. Load and Tokenize Data
+with open('input.txt', 'r') as f:
+    text = f.read().lower().split('\n')
+
+tokenizer = Tokenizer()
+tokenizer.fit_on_texts(text)
+total_words = len(tokenizer.word_index) + 1
+
+# 2. Prepare N-gram Sequences
+input_sequences = []
+for line in text:
+    token_list = tokenizer.texts_to_sequences([line])[0]
+    for i in range(1, len(token_list)):
+        input_sequences.append(token_list[:i+1])
+
+max_seq_len = max(len(seq) for seq in input_sequences)
+input_sequences = np.array(pad_sequences(input_sequences, maxlen=max_seq_len, padding='pre'))
+
+X, y = input_sequences[:, :-1], input_sequences[:, -1]
+#3. Build and Train RNN model
+model = Sequential([
+    Embedding(total_words, 10, input_length=max_seq_len-1),
+    SimpleRNN(50),
+    Dense(total_words, activation='softmax')
+])
+model.compile(loss='sparse_categorical_crossentropy', optimizer='adam')
+model.fit(X, y, epochs=1000, verbose=1)
+
+#4. Predict Next Word from User Input
+while True:
+    user_text = input("Enter a seed text (type 'exit' to quit): ")
+    if user_text == 'exit':
+        break
+    seq = pad_sequences(tokenizer.texts_to_sequences([user_text]), maxlen=max_seq_len-1, padding='pre')
+    pred_idx = np.argmax(model.predict(seq, verbose = 0), axis = -1)[0]
+    print(f"Predicted next word: {tokenizer.index_word.get(pred_idx, '')}\n")
+
+
+     
+Epoch 1/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 3s 23ms/step - loss: 6.2549
+Epoch 2/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 23ms/step - loss: 5.8012
+Epoch 3/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 23ms/step - loss: 5.7097
+Epoch 4/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 24ms/step - loss: 5.6955
+Epoch 5/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 25ms/step - loss: 5.6905
+Epoch 6/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 2s 37ms/step - loss: 5.6811
+Epoch 7/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 2s 34ms/step - loss: 5.6722
+Epoch 8/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 2s 23ms/step - loss: 5.6611
+Epoch 9/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 23ms/step - loss: 5.6364
+Epoch 10/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 25ms/step - loss: 5.5903
+Epoch 11/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 24ms/step - loss: 5.5125
+Epoch 12/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 24ms/step - loss: 5.4176
+Epoch 13/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 23ms/step - loss: 5.3111
+Epoch 14/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 25ms/step - loss: 5.2002
+Epoch 15/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 3s 33ms/step - loss: 5.1017
+Epoch 16/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 25ms/step - loss: 4.9792
+Epoch 17/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 25ms/step - loss: 4.8606
+Epoch 18/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 24ms/step - loss: 4.7574
+Epoch 19/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 23ms/step - loss: 4.6335
+Epoch 20/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 23ms/step - loss: 4.5249
+Epoch 21/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 24ms/step - loss: 4.4090
+Epoch 22/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 24ms/step - loss: 4.2974
+Epoch 23/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 2s 33ms/step - loss: 4.1888
+Epoch 24/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 2s 31ms/step - loss: 4.0902
+Epoch 25/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 23ms/step - loss: 3.9809
+Epoch 26/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 23ms/step - loss: 3.8753
+Epoch 27/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 23ms/step - loss: 3.7766
+Epoch 28/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 23ms/step - loss: 3.6881
+Epoch 29/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 23ms/step - loss: 3.5929
+Epoch 30/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 23ms/step - loss: 3.4922
+Epoch 31/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 24ms/step - loss: 3.4054
+Epoch 32/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 2s 34ms/step - loss: 3.3150
+Epoch 33/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 2s 41ms/step - loss: 3.2285
+Epoch 34/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 27ms/step - loss: 3.1450
+Epoch 35/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 2s 24ms/step - loss: 3.0588
+Epoch 36/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 23ms/step - loss: 2.9799
+Epoch 37/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 24ms/step - loss: 2.8975
+Epoch 38/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 24ms/step - loss: 2.8165
+Epoch 39/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 24ms/step - loss: 2.7446
+Epoch 40/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 24ms/step - loss: 2.6676
+Epoch 41/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 2s 35ms/step - loss: 2.5950
+Epoch 42/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 2s 34ms/step - loss: 2.5180
+Epoch 43/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 26ms/step - loss: 2.4498
+Epoch 44/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 26ms/step - loss: 2.6982
+Epoch 45/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 3s 28ms/step - loss: 2.4633
+Epoch 46/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 25ms/step - loss: 2.3457
+Epoch 47/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 26ms/step - loss: 2.2725
+Epoch 48/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 25ms/step - loss: 2.2321
+Epoch 49/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 2s 43ms/step - loss: 2.1503
+Epoch 50/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 2s 41ms/step - loss: 2.0686
+Epoch 51/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 27ms/step - loss: 2.0032
+Epoch 52/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 24ms/step - loss: 1.9531
+Epoch 53/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 24ms/step - loss: 1.8947
+Epoch 54/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 24ms/step - loss: 1.8394
+Epoch 55/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 26ms/step - loss: 1.7913
+Epoch 56/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 26ms/step - loss: 1.7415
+Epoch 57/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 2s 29ms/step - loss: 1.6929
+Epoch 58/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 3s 43ms/step - loss: 1.6478
+Epoch 59/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 1s 26ms/step - loss: 1.6065
+Epoch 60/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 3s 30ms/step - loss: 1.5613
+Epoch 61/1000
+51/51 ━━━━━━━━━━━━━━━━━━━━ 2s 32ms/step - loss: 1.5244
+Epoch 62/1000
+
+
+     
+
+
+     
+
+
+     
+
+
+     
+
+
+     
+
+
+     
+
+
+     
+
+
+     
+
+
+     
